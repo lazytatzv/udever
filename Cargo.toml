@@ -1,0 +1,13 @@
+[package]
+name = "udever"
+version = "0.1.0"
+edition = "2024"
+description = "Interactive udev rule generator for Arch Linux"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.5.54", features = ["derive"] }
+clap_complete = "4.4"
+console = "0.16.2"
+dialoguer = { version = "0.12.0", features = ["fuzzy-select"] }
+libc = "0.2.180"
