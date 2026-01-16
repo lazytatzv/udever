@@ -1,11 +1,11 @@
-use clap::{CommandFactory, Parser, ValueEnum};
+use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use dialoguer::{theme::ColorfulTheme, Confirm, FuzzySelect, Input, Select};
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::{Command};
 use std::thread;
 use std::time::Duration;
 
