@@ -9,7 +9,7 @@ use std::process::{Command};
 use std::thread;
 use std::time::Duration;
 use nix::unistd::getuid;
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 #[derive(Parser)]
 #[command(name = "udever")]
@@ -75,7 +75,7 @@ fn main() -> Result<()> {
 }
 
 // Use anyhow
-fn reload_udev(theme: &ColorfulTheme) -> io::Result<()> {
+fn reload_udev(theme: &ColorfulTheme) -> Result<()> {
     println!("Reloading udev rules...");
 
     if Confirm::with_theme(theme)
@@ -83,17 +83,33 @@ fn reload_udev(theme: &ColorfulTheme) -> io::Result<()> {
         .default(true)
         .interact()?
     {
-        Command::new("udevadm")
+        let status = Command::new("udevadm")
             .arg("control")
             .arg("--reload")
-            .status()?;
+            .status()
+            .context("Udev control failed to run")?;
 
-        Command::new("udevadm")
+        if status.success() {
+            println!("udev rules reloaded.");
+        } else {
+            anyhow::bail!("udevadm control failed: {}", status);
+        }
+
+        let status = Command::new("udevadm")
             .arg("trigger")
             .arg("--action=add")
             .arg("--subsystem-match=usb")
-            .status()?;
+            .status()
+            .context("udevadm trigger failed")?;
+    
+        if status.success() {
+            println!("udev triggerd");
+        } else {
+            anyhow::bail!("udev trigger failed {}", status);
+        }
+
     }
+
 
     Ok(())
 
