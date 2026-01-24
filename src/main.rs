@@ -52,6 +52,7 @@ fn main() -> Result<()> {
                 "Create new rule",
                 "Edit existing rule",
                 "Delete rule",
+                "Reload udev",
                 "Exit"
             ];
             
@@ -65,6 +66,7 @@ fn main() -> Result<()> {
                 0 => create_new_rule(&theme, None)?,
                 1 => manage_rules(&theme, "edit")?,
                 2 => manage_rules(&theme, "delete")?,
+                3 => reload_udev(&theme)?,
                 _ => break,
             }
         }
@@ -73,19 +75,25 @@ fn main() -> Result<()> {
 }
 
 // Use anyhow
-fn reload_udev() -> io::Result<()> {
+fn reload_udev(theme: &ColorfulTheme) -> io::Result<()> {
     println!("Reloading udev rules...");
 
-    Command::new("udevadm")
-        .arg("control")
-        .arg("--reload")
-        .status()?;
+    if Confirm::with_theme(theme)
+        .with_prompt("Reload udev?")
+        .default(true)
+        .interact()?
+    {
+        Command::new("udevadm")
+            .arg("control")
+            .arg("--reload")
+            .status()?;
 
-    Command::new("udevadm")
-        .arg("trigger")
-        .arg("--action=add")
-        .arg("--subsystem-match=usb")
-        .status()?;
+        Command::new("udevadm")
+            .arg("trigger")
+            .arg("--action=add")
+            .arg("--subsystem-match=usb")
+            .status()?;
+    }
 
     Ok(())
 
