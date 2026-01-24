@@ -220,88 +220,83 @@ fn apply_and_verify(symlink: &Option<String>) -> Result<(), Box<dyn std::error::
 }
 
 // Returns (idVendor, idProduct, Description)
-fn select_device(theme: &ColorfulTheme) -> Result<Option<(String, String, String)>, Box<dyn std::error::Error>> {
+fn select_device(
+    theme: &ColorfulTheme,
+) -> Result<Option<(String, String, String)>, Box<dyn std::error::Error>> {
 
-    let mut items = Vec::new();
-
+    // (vid, pid, name, bus)
+    let mut items: Vec<(String, String, String, String)> = Vec::new();
     let sys_path = Path::new("/sys/bus/usb/devices");
-    
-    for entry in fs::read_dir(&sys_path)? {
+
+    for entry in fs::read_dir(sys_path)? {
         let entry = entry?;
         let path = entry.path();
 
         let id_vendor = fs::read_to_string(path.join("idVendor")).ok();
         let id_product = fs::read_to_string(path.join("idProduct")).ok();
 
-        let bus = path.file_name().unwrap().to_string_lossy();
-
-        //if id_vendor.clone().expect("No vid").trim() == "1d6b" {
-        //    continue;
-        //}
-
         if let (Some(id_vendor), Some(id_product)) = (id_vendor, id_product) {
             let product = fs::read_to_string(path.join("product")).unwrap_or_default();
             let manu = fs::read_to_string(path.join("manufacturer")).unwrap_or_default();
 
-            let name = format!(
-                "{} {}",
-                manu.trim(),
-                product.trim()
-            ).trim().to_string();
+            let name = format!("{} {}", manu.trim(), product.trim())
+                .trim()
+                .to_string();
 
-            let vidpid = format!(
-                "[{}:{}]",
-                id_vendor.trim(),
-                id_product.trim(),
-            );
+            let bus = path
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string();
 
-            let bus = format!("@{}", bus);
-        
-            items.push((name, vidpid, bus));
-
+            items.push((
+                id_vendor.trim().to_string(),
+                id_product.trim().to_string(),
+                name,
+                format!("@{}", bus),
+            ));
         }
-
-
     }
 
     if items.is_empty() {
         return Err("No USB devices found".into());
     }
 
+    // Sort by human-readable name
     items.sort_by(|a, b| a.2.cmp(&b.2));
 
-    let name_w = items.iter().map(|x| x.0.len()).max().unwrap_or(0);
-    let vid_w = items.iter().map(|x| x.1.len()).max().unwrap_or(0);
-    
+    let name_w = items.iter().map(|x| x.2.len()).max().unwrap_or(0);
 
-    let labels: Vec<String> = items.iter().enumerate().map(|(i, (n, v, b))| {
-        format!(
-            "{:>2}. {:<name_w$} {:<vid_w$} {}",
-            i + 1,
-            n,
-            v,
-            b,
-            name_w = name_w,
-            vid_w = vid_w,
-        )
-    }).collect();
-
-    let mut labels = labels;
+    // UI labels only
+    let mut labels: Vec<String> = items
+        .iter()
+        .enumerate()
+        .map(|(i, (vid, pid, name, bus))| {
+            format!(
+                "{:>2}. {:<name_w$} [{:}:{:}] {}",
+                i + 1,
+                name,
+                vid,
+                pid,
+                bus,
+                name_w = name_w,
+            )
+        })
+        .collect();
 
     labels.push(" Go Back".into());
 
-    // Show selection menu
     let idx = FuzzySelect::with_theme(theme)
         .with_prompt("Select USB Device (Type to search)")
         .default(0)
         .items(&labels)
-        
         .interact()?;
 
-    // Go Back
     if idx == labels.len() - 1 {
         return Ok(None);
     }
 
-    Ok(Some(items[idx].clone()))
+    let (vid, pid, name, _) = &items[idx];
+    Ok(Some((vid.clone(), pid.clone(), name.clone())))
 }
+
