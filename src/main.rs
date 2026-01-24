@@ -58,7 +58,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .with_prompt("udever")
                 .default(0)
                 .items(options)
-                
                 .interact()?;
 
             match selection {
@@ -70,6 +69,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     Ok(())
+}
+
+fn reload_udev() -> io::Result<()> {
+    println!("Reloading udev rules...");
+
+    Command::new("udevadm")
+        .arg("control")
+        .arg("--reload")
+        .status()?;
+
+    Command::new("udevadm")
+        .arg("trigger")
+        .arg("--action=add")
+        .arg("--subsystem-match=usb")
+        .status()?;
+
+    Ok(())
+
 }
 
 fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
@@ -90,7 +107,7 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<(), 
 
     let symlink = if Confirm::with_theme(theme)
         .with_prompt("Create symlink?")
-        .default(false)
+        .default(true) // You should create symlink
         .interact()? 
     {
         let default = format!("{}_{}", vendor, product);
