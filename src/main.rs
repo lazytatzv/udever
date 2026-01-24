@@ -225,7 +225,6 @@ fn manage_rules(theme: &ColorfulTheme, action: &str) -> Result<()> {
         .with_prompt(format!("Select rule to {} (Type to search)", action))
         .items(&files)
         .default(0)
-        
         .interact()?;
 
     if selection == files.len() - 1 { return Ok(()); }
@@ -241,8 +240,19 @@ fn manage_rules(theme: &ColorfulTheme, action: &str) -> Result<()> {
 }
 
 fn open_editor(filepath: &str) -> Result<()> {
-    let editor = env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
-    Command::new(editor).arg(filepath).status()?;
+    let editor = env::var("VISUAL")
+        .or_else(|_| env::var("EDITOR"))
+        .unwrap_or_else(|_| "nano".to_string());
+    
+    let status = Command::new(&editor)
+        .arg(filepath)
+        .status()
+        .with_context(|| format!("Failed to launch editor '{}'. Ensure $EDITOR exists.", editor))?;
+
+    if !status.success() {
+        anyhow::bail!("Editor terminated in a wrong way");
+    }
+
     Ok(())
 }
 
