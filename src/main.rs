@@ -22,7 +22,7 @@ struct Args {
     completion: Option<Shell>,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
 
     let args = Args::parse();
     
@@ -91,12 +91,14 @@ fn reload_udev() -> io::Result<()> {
 
 }
 
-fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> {
     // idVendor and ipProduct are required(hex)
     
     let (vendor, product, desc) = if let Some(id) = arg_id {
         let p: Vec<&str> = id.split(':').collect();
-        if p.len() != 2 { return Err("Invalid ID".into()); }
+        if p.len() != 2 {
+            anyhow::bail!("Invalid ID");
+        }
         (p[0].to_string(), p[1].to_string(), "Target".to_string())
     } else {
         match select_device(theme)? {
