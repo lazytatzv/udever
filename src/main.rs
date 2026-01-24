@@ -71,6 +71,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+    // idVendor and ipProduct are required(hex)
+    
     let (vendor, product, desc) = if let Some(id) = arg_id {
         let p: Vec<&str> = id.split(':').collect();
         if p.len() != 2 { return Err("Invalid ID".into()); }
@@ -210,27 +212,65 @@ fn apply_and_verify(symlink: &Option<String>) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
+// Returns (idVendor, idProduct, Description)
 fn select_device(theme: &ColorfulTheme) -> Result<Option<(String, String, String)>, Box<dyn std::error::Error>> {
-    let output = Command::new("lsusb").output()?;
-    let stdout = String::from_utf8(output.stdout)?;
-    let mut lines: Vec<&str> = stdout.lines().collect();
-    if lines.is_empty() { return Err("No devices found".into()); }
-    lines.push("Go Back");
 
+    let mut items = Vec::new();
+
+    let sys_path = Path::new("/sys/bus/usb/devices");
+    
+    for entry in fs::read_dir(&sys_path)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        let id_vendor = fs::read_to_string(path.join("idVendor")).ok();
+        let id_product = fs::read_to_string(path.join("idProduct")).ok();
+
+        let bus = path.file_name().unwrap().to_string_lossy();
+
+        if let (Some(id_vendor), Some(id_product)) = (id_vendor, id_product) {
+            let product = fs::read_to_string(path.join("product")).unwrap_or_default();
+            let manu = fs::read_to_string(path.join("manufacturer")).unwrap_or_default();
+
+            let description = format!(
+                "{} {} [{}:{}] @{}",
+                manu.trim(), // remove \n
+                product.trim(),
+                id_vendor.trim(),
+                id_product.trim(),
+                bus,
+            );
+        
+            items.push((id_vendor.trim().to_string(),
+                id_product.trim().to_string(),
+                description));
+
+        }
+
+
+    }
+
+    if items.is_empty() {
+        return Err("No USB devices found".into());
+    }
+    
+
+    let labels: Vec<&str> = items.iter().map(|x| x.2.as_str()).collect();
+    let mut labels = labels;
+
+    labels.push("Go Back");
+
+    // Show selection menu
     let idx = FuzzySelect::with_theme(theme)
         .with_prompt("Select USB Device (Type to search)")
         .default(0)
-        .items(&lines)
+        .items(&labels)
         .interact()?;
 
-    if idx == lines.len() - 1 { return Ok(None); }
+    // Go Back
+    if idx == labels.len() - 1 {
+        return Ok(None);
+    }
 
-    let parts: Vec<&str> = lines[idx].split("ID ").collect();
-    let data = parts.get(1).ok_or("Parse error")?;
-    let mut iter = data.splitn(2, ' ');
-    let id = iter.next().unwrap_or("");
-    let name = iter.next().unwrap_or("Unknown").trim();
-    let id_parts: Vec<&str> = id.split(':').collect();
-    if id_parts.len() != 2 { return Err("Invalid ID".into()); }
-    Ok(Some((id_parts[0].to_string(), id_parts[1].to_string(), name.to_string())))
+    Ok(Some(items[idx].clone()))
 }
