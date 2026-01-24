@@ -22,6 +22,7 @@ struct Args {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+
     let args = Args::parse();
     
     if let Some(shell) = args.completion {
@@ -57,6 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .with_prompt("udever")
                 .default(0)
                 .items(options)
+                
                 .interact()?;
 
             match selection {
@@ -107,6 +109,7 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<(), 
         .with_prompt("Permission")
         .default(0)
         .items(perms)
+        
         .interact()?;
 
     let perm_rule = match perm_idx {
@@ -146,9 +149,12 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<(), 
         println!("{}", rule.trim());
         println!("-----------------------------------");
         
-        if !Confirm::with_theme(theme).with_prompt("Write to file?").default(true).interact()? {
-            println!("Aborted.");
-            return Ok(());
+        if !Confirm::with_theme(theme)
+            .with_prompt("Write to file?")
+            .default(true)
+            .interact()? {
+                println!("Aborted.");
+                return Ok(());
         }
     }
 
@@ -174,6 +180,7 @@ fn manage_rules(theme: &ColorfulTheme, action: &str) -> Result<(), Box<dyn std::
         .with_prompt(format!("Select rule to {} (Type to search)", action))
         .items(&files)
         .default(0)
+        
         .interact()?;
 
     if selection == files.len() - 1 { return Ok(()); }
@@ -228,6 +235,10 @@ fn select_device(theme: &ColorfulTheme) -> Result<Option<(String, String, String
 
         let bus = path.file_name().unwrap().to_string_lossy();
 
+        //if id_vendor.clone().expect("No vid").trim() == "1d6b" {
+        //    continue;
+        //}
+
         if let (Some(id_vendor), Some(id_product)) = (id_vendor, id_product) {
             let product = fs::read_to_string(path.join("product")).unwrap_or_default();
             let manu = fs::read_to_string(path.join("manufacturer")).unwrap_or_default();
@@ -257,6 +268,8 @@ fn select_device(theme: &ColorfulTheme) -> Result<Option<(String, String, String
         return Err("No USB devices found".into());
     }
 
+    items.sort_by(|a, b| a.2.cmp(&b.2));
+
     let name_w = items.iter().map(|x| x.0.len()).max().unwrap_or(0);
     let vid_w = items.iter().map(|x| x.1.len()).max().unwrap_or(0);
     
@@ -275,13 +288,14 @@ fn select_device(theme: &ColorfulTheme) -> Result<Option<(String, String, String
 
     let mut labels = labels;
 
-    labels.push("Go Back".into());
+    labels.push(" Go Back".into());
 
     // Show selection menu
     let idx = FuzzySelect::with_theme(theme)
         .with_prompt("Select USB Device (Type to search)")
         .default(0)
         .items(&labels)
+        
         .interact()?;
 
     // Go Back
