@@ -232,18 +232,21 @@ fn select_device(theme: &ColorfulTheme) -> Result<Option<(String, String, String
             let product = fs::read_to_string(path.join("product")).unwrap_or_default();
             let manu = fs::read_to_string(path.join("manufacturer")).unwrap_or_default();
 
-            let description = format!(
-                "{} {} [{}:{}] @{}",
-                manu.trim(), // remove \n
-                product.trim(),
+            let name = format!(
+                "{} {}",
+                manu.trim(),
+                product.trim()
+            ).trim().to_string();
+
+            let vidpid = format!(
+                "[{}:{}]",
                 id_vendor.trim(),
                 id_product.trim(),
-                bus,
             );
+
+            let bus = format!("@{}", bus);
         
-            items.push((id_vendor.trim().to_string(),
-                id_product.trim().to_string(),
-                description));
+            items.push((name, vidpid, bus));
 
         }
 
@@ -253,12 +256,26 @@ fn select_device(theme: &ColorfulTheme) -> Result<Option<(String, String, String
     if items.is_empty() {
         return Err("No USB devices found".into());
     }
+
+    let name_w = items.iter().map(|x| x.0.len()).max().unwrap_or(0);
+    let vid_w = items.iter().map(|x| x.1.len()).max().unwrap_or(0);
     
 
-    let labels: Vec<&str> = items.iter().map(|x| x.2.as_str()).collect();
+    let labels: Vec<String> = items.iter().enumerate().map(|(i, (n, v, b))| {
+        format!(
+            "{:>2}. {:<name_w$} {:<vid_w$} {}",
+            i + 1,
+            n,
+            v,
+            b,
+            name_w = name_w,
+            vid_w = vid_w,
+        )
+    }).collect();
+
     let mut labels = labels;
 
-    labels.push("Go Back");
+    labels.push("Go Back".into());
 
     // Show selection menu
     let idx = FuzzySelect::with_theme(theme)
