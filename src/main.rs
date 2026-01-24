@@ -8,6 +8,7 @@ use std::path::Path;
 use std::process::{Command};
 use std::thread;
 use std::time::Duration;
+use nix::unistd::getuid;
 
 #[derive(Parser)]
 #[command(name = "udever")]
@@ -29,7 +30,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    if unsafe { libc::getuid() != 0 } {
+    // if unsafe { libc::getuid() != 0 } {
+    //     eprintln!("Error: Run as root.");
+    //     std::process::exit(1);
+    // }
+
+    if getuid().as_raw() != 0 {
         eprintln!("Error: Run as root.");
         std::process::exit(1);
     }
