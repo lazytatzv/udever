@@ -9,6 +9,7 @@ use std::process::{Command};
 use std::thread;
 use std::time::Duration;
 use nix::unistd::getuid;
+use anyhow::Result;
 
 #[derive(Parser)]
 #[command(name = "udever")]
@@ -71,6 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+// Use anyhow
 fn reload_udev() -> io::Result<()> {
     println!("Reloading udev rules...");
 
@@ -186,7 +188,7 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<(), 
     Ok(())
 }
 
-fn manage_rules(theme: &ColorfulTheme, action: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn manage_rules(theme: &ColorfulTheme, action: &str) -> Result<()> {
     let paths = fs::read_dir("/etc/udev/rules.d/")?;
     let mut files: Vec<String> = paths.filter_map(|e| e.ok()).map(|e| e.path().to_string_lossy().into_owned()).filter(|s| s.ends_with(".rules")).collect();
     files.sort();
@@ -212,13 +214,13 @@ fn manage_rules(theme: &ColorfulTheme, action: &str) -> Result<(), Box<dyn std::
     Ok(())
 }
 
-fn open_editor(filepath: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn open_editor(filepath: &str) -> Result<()> {
     let editor = env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
     Command::new(editor).arg(filepath).status()?;
     Ok(())
 }
 
-fn apply_and_verify(symlink: &Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+fn apply_and_verify(symlink: &Option<String>) -> Result<()> {
     println!("Reloading udev rules...");
     Command::new("udevadm").arg("control").arg("--reload").status()?;
     Command::new("udevadm").args(&["trigger", "--action=add", "--subsystem-match=usb"]).status()?;
@@ -239,7 +241,7 @@ fn apply_and_verify(symlink: &Option<String>) -> Result<(), Box<dyn std::error::
 // Returns (idVendor, idProduct, Description)
 fn select_device(
     theme: &ColorfulTheme,
-) -> Result<Option<(String, String, String)>, Box<dyn std::error::Error>> {
+) -> Result<Option<(String, String, String)>> {
 
     // (vid, pid, name, bus)
     let mut items: Vec<(String, String, String, String)> = Vec::new();
@@ -276,7 +278,8 @@ fn select_device(
     }
 
     if items.is_empty() {
-        return Err("No USB devices found".into());
+        //return Err(anyhow::anyhow!("No USB devices found"));
+        anyhow::bail!("No USB devices found");
     }
 
     // Sort by human-readable name

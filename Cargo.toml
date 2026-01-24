@@ -6,6 +6,7 @@ description = "Interactive udev rule generator for Arch Linux"
 license = "MIT"
 
 [dependencies]
+anyhow = "1.0.100"
 clap = { version = "4.5.54", features = ["derive"] }
 clap_complete = "4.4"
 console = "0.16.2"
