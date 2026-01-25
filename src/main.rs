@@ -24,6 +24,17 @@ struct Args {
 }
 
 fn main() -> Result<()> {
+
+    let theme = ColorfulTheme::default();
+
+    // UID0 is root
+    if getuid().as_raw() != 0 {
+        eprintln!("Error: Run as root.");
+        std::process::exit(1);
+    }
+
+    udev_healthcheck(&theme)?;
+
     let args = Args::parse();
 
     if let Some(shell) = args.completion {
@@ -32,13 +43,6 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // UID0 is root
-    if getuid().as_raw() != 0 {
-        eprintln!("Error: Run as root.");
-        std::process::exit(1);
-    }
-
-    let theme = ColorfulTheme::default();
 
     if args.id.is_some() {
         create_new_rule(&theme, args.id)?;
@@ -49,7 +53,7 @@ fn main() -> Result<()> {
                 "Create new rule",
                 "Edit existing rule",
                 "Delete rule",
-                "Reload udev",
+                "Force Reload & Trigger",
                 "Exit",
             ];
 
@@ -69,6 +73,66 @@ fn main() -> Result<()> {
         }
     }
     Ok(())
+}
+
+// Experimental
+fn view_udev_logs() -> Result<()> {
+    println!("\n--- Recent udev logs ---");
+    let output = Command::new("journalctl")
+        .arg("-u")
+        .arg("systemd-udevd")
+        .arg("-n")
+        .arg("10")
+        .arg("--no-pager")
+        .output()
+        .context("Failed to read journalctl")?;
+
+    if output.status.success() {
+        println!("{}", String::from_utf8_lossy(&output.stdout));
+    } else {
+        println!("Could not retrieve logs.");
+    }
+    Ok(())
+}
+
+// With systemd
+fn udev_healthcheck(theme: &ColorfulTheme) -> Result<()> {
+    let is_active = Command::new("systemctl")
+        .arg("is-active")
+        .arg("systemd-udevd")
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+
+    if is_active {
+        return Ok(());
+    } 
+
+    println!("udev daemon is NOT active.");
+
+    if Confirm::with_theme(theme)
+        .with_prompt("Should I try to start systemd-udevd for you?")
+        .default(true)
+        .interact()?
+    {
+        println!("Starting systemd-udevd...");
+        let status = Command::new("systemctl")
+            .arg("start")
+            .arg("systemd-udevd")
+            .status()
+            .context("Failed to execute systemctl start")?;
+
+        if status.success() {
+            println!("Successfully started udev daemon.");
+            Ok(())
+        } else {
+            anyhow::bail!("Failed to start udev. Please check 'systemctl status systemd-udevd.'");
+            
+        }
+        
+    } else {
+        anyhow::bail!("Aborted. udev must be running to use this tool.");
+    }
 }
 
 fn check_os() -> Result<String> {
