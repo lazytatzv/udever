@@ -1,9 +1,14 @@
 [package]
 name = "udever"
 version = "0.1.0"
+authors = ["lazytatzv"]
 edition = "2024"
-description = "Interactive udev rule generator for Arch Linux"
-license = "MIT"
+description = "Interactive udev rule generator for Linux (mainly support Arch based)"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/lazytatzv/udever"
+readme = "README.md"
+keywords = ["udev", "usb", "linux", "cli"]
+categories = ["command-line-utilities", "os::linux-apis"]
 
 [dependencies]
 anyhow = "1.0.100"
