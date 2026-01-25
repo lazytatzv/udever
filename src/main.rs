@@ -1,15 +1,15 @@
+use anyhow::{Context, Result};
 use clap::{CommandFactory, Parser};
-use clap_complete::{generate, Shell};
-use dialoguer::{theme::ColorfulTheme, Confirm, FuzzySelect, Input, Select};
+use clap_complete::{Shell, generate};
+use dialoguer::{Confirm, FuzzySelect, Input, Select, theme::ColorfulTheme};
+use nix::unistd::getuid;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
-use std::process::{Command};
+use std::process::Command;
 use std::thread;
 use std::time::Duration;
-use nix::unistd::getuid;
-use anyhow::{Context, Result};
 
 #[derive(Parser)]
 #[command(name = "udever")]
@@ -23,20 +23,15 @@ struct Args {
 }
 
 fn main() -> Result<()> {
-
     let args = Args::parse();
-    
+
     if let Some(shell) = args.completion {
         let mut cmd = Args::command();
         generate(shell, &mut cmd, "udever", &mut io::stdout());
         return Ok(());
     }
 
-    // if unsafe { libc::getuid() != 0 } {
-    //     eprintln!("Error: Run as root.");
-    //     std::process::exit(1);
-    // }
-
+    // UID0 is root
     if getuid().as_raw() != 0 {
         eprintln!("Error: Run as root.");
         std::process::exit(1);
@@ -47,15 +42,16 @@ fn main() -> Result<()> {
     if args.id.is_some() {
         create_new_rule(&theme, args.id)?;
     } else {
+        // Without any arguments (by default)
         loop {
             let options = &[
                 "Create new rule",
                 "Edit existing rule",
                 "Delete rule",
                 "Reload udev",
-                "Exit"
+                "Exit",
             ];
-            
+
             let selection = Select::with_theme(&theme)
                 .with_prompt("udever")
                 .default(0)
@@ -101,23 +97,20 @@ fn reload_udev(theme: &ColorfulTheme) -> Result<()> {
             .arg("--subsystem-match=usb")
             .status()
             .context("udevadm trigger failed")?;
-    
+
         if status.success() {
             println!("udev triggerd");
         } else {
             anyhow::bail!("udev trigger failed {}", status);
         }
-
     }
 
-
     Ok(())
-
 }
 
 fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> {
     // idVendor and ipProduct are required(hex)
-    
+
     let (vendor, product, desc) = if let Some(id) = arg_id {
         let p: Vec<&str> = id.split(':').collect();
         if p.len() != 2 {
@@ -136,10 +129,15 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
     let symlink = if Confirm::with_theme(theme)
         .with_prompt("Create symlink?")
         .default(true) // You should create symlink
-        .interact()? 
+        .interact()?
     {
         let default = format!("{}_{}", vendor, product);
-        Some(Input::<String>::with_theme(theme).with_prompt("Symlink Name").default(default).interact_text()?)
+        Some(
+            Input::<String>::with_theme(theme)
+                .with_prompt("Symlink Name")
+                .default(default)
+                .interact_text()?,
+        )
     } else {
         None
     };
@@ -154,7 +152,6 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
         .with_prompt("Permission")
         .default(0)
         .items(perms)
-        
         .interact()?;
 
     let perm_rule = match perm_idx {
@@ -164,9 +161,11 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
         _ => "TAG+=\"uaccess\"".to_string(),
     };
 
-    let name_base = symlink.clone().unwrap_or_else(|| format!("{}-{}", vendor, product));
+    let name_base = symlink
+        .clone()
+        .unwrap_or_else(|| format!("{}-{}", vendor, product));
     let filename = format!("/etc/udev/rules.d/99-{}.rules", name_base);
-    
+
     let mut rule = if perm_rule == "EDITOR" {
         format!(
             "SUBSYSTEM==\"usb\", ACTION==\"add\", ATTRS{{idVendor}}==\"{}\", ATTRS{{idProduct}}==\"{}\", TAG+=\"uaccess\"\n",
@@ -193,13 +192,14 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
         println!("\n--- Preview: {} ---", filename);
         println!("{}", rule.trim());
         println!("-----------------------------------");
-        
+
         if !Confirm::with_theme(theme)
             .with_prompt("Write to file?")
             .default(true)
-            .interact()? {
-                println!("Aborted.");
-                return Ok(());
+            .interact()?
+        {
+            println!("Aborted.");
+            return Ok(());
         }
     }
 
@@ -216,10 +216,17 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
 
 fn manage_rules(theme: &ColorfulTheme, action: &str) -> Result<()> {
     let paths = fs::read_dir("/etc/udev/rules.d/")?;
-    let mut files: Vec<String> = paths.filter_map(|e| e.ok()).map(|e| e.path().to_string_lossy().into_owned()).filter(|s| s.ends_with(".rules")).collect();
+    let mut files: Vec<String> = paths
+        .filter_map(|e| e.ok())
+        .map(|e| e.path().to_string_lossy().into_owned())
+        .filter(|s| s.ends_with(".rules"))
+        .collect();
     files.sort();
     files.push("Go Back".to_string());
-    if files.len() == 1 { println!("No rules found."); return Ok(()); }
+    if files.len() == 1 {
+        println!("No rules found.");
+        return Ok(());
+    }
 
     let selection = FuzzySelect::with_theme(theme)
         .with_prompt(format!("Select rule to {} (Type to search)", action))
@@ -227,27 +234,42 @@ fn manage_rules(theme: &ColorfulTheme, action: &str) -> Result<()> {
         .default(0)
         .interact()?;
 
-    if selection == files.len() - 1 { return Ok(()); }
+    if selection == files.len() - 1 {
+        return Ok(());
+    }
     let target = &files[selection];
 
-    if action == "edit" { open_editor(target)?; apply_and_verify(&None)?; } 
-    else if action == "delete" {
-        if Confirm::with_theme(theme).with_prompt(format!("Delete {}?", target)).interact()? {
-            fs::remove_file(target)?; println!("Deleted."); apply_and_verify(&None)?;
+    if action == "edit" {
+        open_editor(target)?;
+        apply_and_verify(&None)?;
+    } else if action == "delete" {
+        if Confirm::with_theme(theme)
+            .with_prompt(format!("Delete {}?", target))
+            .interact()?
+        {
+            fs::remove_file(target)?;
+            println!("Deleted.");
+            apply_and_verify(&None)?;
         }
     }
     Ok(())
 }
 
 fn open_editor(filepath: &str) -> Result<()> {
+    // I set nano as default cause it's possibly easy to use for even beginners
     let editor = env::var("VISUAL")
         .or_else(|_| env::var("EDITOR"))
         .unwrap_or_else(|_| "nano".to_string());
-    
+
     let status = Command::new(&editor)
         .arg(filepath)
         .status()
-        .with_context(|| format!("Failed to launch editor '{}'. Ensure $EDITOR exists.", editor))?;
+        .with_context(|| {
+            format!(
+                "Failed to launch editor '{}'. Ensure $EDITOR exists.",
+                editor
+            )
+        })?;
 
     if !status.success() {
         anyhow::bail!("Editor terminated in a wrong way");
@@ -258,27 +280,34 @@ fn open_editor(filepath: &str) -> Result<()> {
 
 fn apply_and_verify(symlink: &Option<String>) -> Result<()> {
     println!("Reloading udev rules...");
-    Command::new("udevadm").arg("control").arg("--reload").status()?;
-    Command::new("udevadm").args(&["trigger", "--action=add", "--subsystem-match=usb"]).status()?;
+    Command::new("udevadm")
+        .arg("control")
+        .arg("--reload")
+        .status()?;
+    Command::new("udevadm")
+        .args(&["trigger", "--action=add", "--subsystem-match=usb"])
+        .status()?;
     if let Some(s) = symlink {
         let path = Path::new("/dev").join(s);
         print!("Waiting for device...");
         for _ in 0..20 {
-            if path.exists() { println!("\nSuccess: {:?}", path); return Ok(()); }
+            if path.exists() {
+                println!("\nSuccess: {:?}", path);
+                return Ok(());
+            }
             thread::sleep(Duration::from_millis(100));
             print!(".");
             std::io::stdout().flush()?;
         }
         eprintln!("\nWarning: Device not found yet.");
-    } else { println!("Applied."); }
+    } else {
+        println!("Applied.");
+    }
     Ok(())
 }
 
 // Returns (idVendor, idProduct, Description)
-fn select_device(
-    theme: &ColorfulTheme,
-) -> Result<Option<(String, String, String)>> {
-
+fn select_device(theme: &ColorfulTheme) -> Result<Option<(String, String, String)>> {
     // (vid, pid, name, bus)
     let mut items: Vec<(String, String, String, String)> = Vec::new();
     let sys_path = Path::new("/sys/bus/usb/devices");
@@ -298,11 +327,7 @@ fn select_device(
                 .trim()
                 .to_string();
 
-            let bus = path
-                .file_name()
-                .unwrap()
-                .to_string_lossy()
-                .to_string();
+            let bus = path.file_name().unwrap().to_string_lossy().to_string();
 
             items.push((
                 id_vendor.trim().to_string(),
@@ -355,4 +380,3 @@ fn select_device(
     let (vid, pid, name, _) = &items[idx];
     Ok(Some((vid.clone(), pid.clone(), name.clone())))
 }
-
