@@ -1,4 +1,4 @@
-# :crab: udever
+# 🦀 udever
 
 [![Crates.io](https://img.shields.io/crates/v/udever.svg)](https://crates.io/crates/udever)
 [![License](https://img.shields.io/crates/l/udever.svg)](https://github.com/lazytatzv/udever/blob/main/LICENSE)
@@ -9,7 +9,7 @@
 
 ---
 
-## :zap: Features
+## ⚡ Features
 
 - **Interactive Selection**: Fuzzy-search your connected USB devices. No more `lsusb` grep hunting.
 - **Smart OS Detection**: Automatically selects the correct group (`uucp` for Arch/Manjaro, `dialout` for Debian/Ubuntu).
@@ -21,7 +21,7 @@
 - **Editor Integration**: Open generated rules in `nano`, `vim`, or `nvim` for manual tweaking.
 - **Symlink Generator**: Easily create persistent device names (e.g., `/dev/my_arduino`).
 
-## :rocket: Installation
+## 🚀 Installation
 
 ### From Crates.io (Recommended)
 You need [Rust](https://www.rust-lang.org/tools/install) installed.
@@ -46,7 +46,7 @@ cd udever
 cargo install --path .
 ```
 
-## :book: Usage
+## 📖 Usage
 
 **Note: Root privileges are required to write into `/etc/udev/rules.d/`.**
 
@@ -67,7 +67,7 @@ Generate shell completions (bash/zsh/fish):
 udever --completion zsh > _udever
 ```
 
-## :video_game: Workflow Demo
+## 🎮 Workflow Demo
 
 ```text
 $ sudo udever
@@ -95,7 +95,7 @@ Reloading udev rules...
 Success: /dev/stlink_v2
 ```
 
-## :hammer_and_wrench: Troubleshooting
+## 🛠 Troubleshooting
 
 **"udev daemon is NOT active"**
 `udever` relies on `systemd-udevd`. If the tool warns you, try starting the service:
@@ -103,7 +103,7 @@ Success: /dev/stlink_v2
 sudo systemctl start systemd-udevd
 ```
 
-## :handshake: Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -113,6 +113,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/cool-feature`)
 5. Create a new Pull Request
 
-## :page_facing_up: License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
