@@ -1,7 +1,7 @@
 # :crab: udever
 
 [![Crates.io](https://img.shields.io/crates/v/udever.svg)](https://crates.io/crates/udever)
-[![License](https://img.shields.io/crates/l/udever.svg)](https://github.com/lazytatzv/udever/blob/main/LICENSE)
+[![License](https://img.shields.io/crates/l/udever.svg)](https://github.com/lazytatzv/udever/LICENSE)
 
 > **Stop writing udev rules by hand.**
 >
