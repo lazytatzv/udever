@@ -1,68 +1,113 @@
-# udever
+# ¿ udever
 
-**The Zen udev rule generator for Arch Linux.** Simple, interactive, and safe. Written in Rust.
+[![Crates.io](https://img.shields.io/crates/v/udever.svg)](https://crates.io/crates/udever)
+[![License](https://img.shields.io/crates/l/udever.svg)](https://github.com/lazytatzv/udever/blob/main/LICENSE)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
 
-`udever` creates udev rules for USB devices without the hassle of manually looking up IDs or reloading drivers. It prioritizes security (`uaccess`) and follows Arch Linux standards (`uucp` group).
+> **Stop writing udev rules by hand.**
+>
+> `udever` is a blazing fast, interactive CLI tool to manage udev rules for your USB devices. 
+Generate permission rules, create symlinks, and reload drivers without leaving your terminal.
 
-## Features
+---
 
-* **¿ Fuzzy Search**: Instantly find your device from `lsusb` by typing a few characters.
-* **¿¿ Secure Defaults**: Uses `TAG+="uaccess"` (systemd-logind) instead of insecure `MODE="0666"`.
-* **¿ Arch Native**: Correctly handles `uucp` group for serial devices (Arduino, ESP32, etc.).
-* **¿ Safety First**: Previews the generated rule before writing to `/etc/udev/rules.d/`.
-* **¿ Auto-Reload**: Automatically runs `udevadm control --reload` and `trigger` upon success.
-* **¿ Shell Completion**: Supports Bash, Zsh, and Fish completions out of the box.
+## ¿ Features
 
-## Installation
+- **Interactive Selection**: Fuzzy-search your connected USB devices. No more `lsusb` grep hunting.
+- **Smart OS Detection**: Automatically selects the correct group (`uucp` for Arch/Manjaro, `dialout` for Debian/Ubuntu).
+- **Safe & Robust**:
+  - Filters out Root Hubs to prevent system accidents.
+  - Performs `systemd-udevd` health checks before running.
+- **Instant Feedback**: Automatically reloads rules and triggers device events (`udevadm trigger`).
+- **Editor Integration**: Open generated rules in `nano`, `vim`, or `nvim` for manual tweaking.
+- **Symlink Generator**: Easily create persistent device names (e.g., `/dev/my_arduino`).
 
-### AUR (Recommended)
-You can install `udever` from the AUR:
+## ¿ Installation
 
-```bash
-yay -S udever-git
-```
-
-### Cargo
-If you have Rust installed:
+### From Crates.io (Recommended)
+You need [Rust](https://www.rust-lang.org/tools/install) installed.
 
 ```bash
 cargo install udever
 ```
 
-## Usage
+### From AUR (Also Recommended if you use arch-based Linux)
+You need `AUR Helper` installed.
 
-Run as root (required to write to `/etc/`):
+```bash
+yay -S udever
+# or
+paru -S udever
+```
+
+### From Source
+
+```bash
+git clone [https://github.com/lazytatzv/udever.git](https://github.com/lazytatzv/udever.git)
+cd udever
+cargo install --path .
+```
+
+## ¿ Usage
+
+`Note: Root privileges are required to write into /etc/udev/rules.d/.`
+
+Run the interactive wizard:
 
 ```bash
 sudo udever
 ```
 
-### Interactive Mode
-1.  **Select Device**: Type to search for your USB device (Fuzzy match).
-2.  **Symlink (Optional)**: Create a persistent `/dev/my_device` link.
-3.  **Permission**: Choose from:
-    * `uaccess`: (Recommended) Only the currently logged-in user can access the device.
-    * `Everyone`: Sets `MODE="0666"` (Insecure, useful for debugging).
-    * `Group 'uucp'`: Sets `GROUP="uucp", MODE="0660"` (Standard for serial devices).
-    * `Open in editor`: Open the rule in `$EDITOR` (vim/nano) for advanced configuration.
+### Quick Commands
 
-### CLI Mode (Scripting)
-You can skip the device selection by providing the Vendor:Product ID directly:
+Create a rule for a specific device ID (VID:PID):
 
 ```bash
 sudo udever --id 1234:5678
 ```
 
-## Management
-`udever` also acts as a rule manager.
-* **Edit**: Select an existing rule to open in your editor.
-* **Delete**: Remove old rules and automatically reload udev.
+Generate shell completions (bash/zsh/fish):
 
-## Why "uaccess"?
-Old tutorials suggest `MODE="0666"` (everyone can read/write) or adding users to groups (`plugdev`).
-Modern Linux systems use **Access Control Lists (ACLs)** via `systemd-logind`.
+```bash
+udever --completion zsh > _udever
+```
 
-`udever` applies `TAG+="uaccess"`, which dynamically grants permission *only* to the user currently sitting at the physical terminal. It is the most secure and modern way to handle USB permissions.
+## ¿ Workflow Demo
 
-## License
-MIT
+```bash
+$ sudo udever
+
+? Select USB Device (Type to search)
+> 1. STMicroelectronics [0483:3748] ST-LINK/V2
+  2. FTDI [0403:6001] FT232R USB UART
+  3. Logitech [046d:c52b] USB Receiver
+
+? Permission
+> Current user only (uaccess)
+  Group 'uucp' (mode 0660)
+  Everyone (mode 0666)
+
+? Create symlink? [Y/n] Y
+? Symlink Name: stlink_v2
+
+--- Preview: /etc/udev/rules.d/99-stlink_v2.rules ---
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="3748", TAG+="uaccess", SYMLINK+="stlink_v2"
+-----------------------------------------------------
+
+? Write to file? [Y/n] Y
+File created.
+Reloading udev rules...
+Success: /dev/stlink_v2
+```
+
+## ¿ Troubleshooting
+
+"udev daemon is NOT active" udever relies on systemd-udevd. If the tool warns you, try starting the service:
+
+```bash
+sudo systemctl start systemd-udevd
+```
+
+## ¿ License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
