@@ -75,6 +75,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+/*
 // Experimental
 fn view_udev_logs() -> Result<()> {
     println!("\n--- Recent udev logs ---");
@@ -94,6 +95,7 @@ fn view_udev_logs() -> Result<()> {
     }
     Ok(())
 }
+*/
 
 // With systemd
 fn udev_healthcheck(theme: &ColorfulTheme) -> Result<()> {
