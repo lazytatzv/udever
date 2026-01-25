@@ -1,21 +1,40 @@
 [package]
 name = "udever"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["lazytatzv"]
-edition = "2024"
-description = "Interactive udev rule generator for Linux (mainly support Arch based)"
+edition = "2024" 
+description = "Interactive udev rule generator for Linux. Stop writing rules by hand."
 license = "MIT"
 repository = "https://github.com/lazytatzv/udever"
+homepage = "https://github.com/lazytatzv/udever"
+documentation = "https://docs.rs/udever"
 readme = "README.md"
-keywords = ["udev", "usb", "linux", "cli"]
-categories = ["command-line-utilities", "os::linux-apis"]
+
+keywords = ["udev", "usb", "linux", "cli", "embedded"]
+
+categories = ["command-line-utilities", "os::linux-apis", "embedded"]
+
+exclude = [
+    ".github",
+    ".gitignore",
+    "images/*",
+    "tests/*",
+    "*.sh"
+]
 
 [dependencies]
-anyhow = "1.0.100"
-clap = { version = "4.5.54", features = ["derive"] }
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
 clap_complete = "4.4"
-console = "0.16.2"
-dialoguer = { version = "0.12.0", features = ["fuzzy-select"] }
-libc = "0.2.180"
-nix = { version = "0.31.1", features = ["user"] }
-os-release = "0.1.0"
+console = "0.16"
+dialoguer = { version = "0.12", features = ["fuzzy-select"] }
+libc = "0.2"
+nix = { version = "0.31", features = ["user"] }
+os-release = "0.1"
+
+[profile.release]
+opt-level = 3       
+lto = true          
+codegen-units = 1   
+strip = true        
+panic = "abort"     
