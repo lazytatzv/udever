@@ -388,6 +388,13 @@ fn select_device(theme: &ColorfulTheme) -> Result<Option<(String, String, String
         let id_product = fs::read_to_string(path.join("idProduct")).ok();
 
         if let (Some(id_vendor), Some(id_product)) = (id_vendor, id_product) {
+            // "1d6b" is Linux Foundation (Root Hub)
+            // It is usually not configured
+            if id_vendor.trim() == "1d6b" {
+                continue;
+            }
+
+
             let product = fs::read_to_string(path.join("product")).unwrap_or_default();
             let manu = fs::read_to_string(path.join("manufacturer")).unwrap_or_default();
 
