@@ -282,13 +282,52 @@ fn manage_rules(theme: &ColorfulTheme, action: &str) -> Result<()> {
     Ok(())
 }
 
+// Should i explore PATH instead of the way below?
+fn has_command(cmd: &str) -> bool {
+    // Run via shell
+    Command::new("sh")
+        .arg("-c")
+        .arg(format!("command -v {}", cmd))
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+
+}
+
+fn get_editor() -> Result<String> {
+    match env::var("VISUAL").or_else(|_| env::var("EDITOR")) {
+        Ok(v) => Ok(v),
+        Err(_) => {
+            eprintln!("Environment variables $VISUAL or $EDITOR are not set.");
+            
+            if has_command("nano") {
+                println!("Nano found. Using it as default.");
+                Ok("nano".to_string())
+            } else if has_command("nvim") {
+                println!("Nvim found. Using it as default.");
+                Ok("nvim".to_string())
+            } else if has_command("vim") {
+                println!("Vim found. Using it as default.");
+                Ok("vim".to_string())
+            } else if has_command("vi") {
+                println!("Vi found. Using it as default.");
+                Ok("vi".to_string())
+            } else {
+                anyhow::bail!(
+                    "No valid editor found (nano/vim/vi). \n\
+                    Please set $EDITOR manually (e.g., export EDITOR=nvim)."
+                )
+            }
+        }
+    }
+}
+
 fn open_editor(filepath: &str) -> Result<()> {
     // I set nano as default cause it's possibly easy to use for even beginners
-    let editor = env::var("VISUAL")
-        .or_else(|_| env::var("EDITOR"))
-        .unwrap_or_else(|_| "nano".to_string());
-
-    println!("Your Editor is {}", editor);
+    let editor = get_editor()?;
+    //println!("Your Editor is {}", editor);
 
     let status = Command::new(&editor)
         .arg(filepath)
