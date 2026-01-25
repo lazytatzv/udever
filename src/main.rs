@@ -76,7 +76,7 @@ fn check_os() -> Result<String> {
     println!("OS Name: {}", os.name);
     println!("OS ID: {}", os.id);
 
-    Ok(os.name)
+    Ok(os.id)
 } 
 
 // Use anyhow
