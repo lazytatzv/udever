@@ -142,12 +142,14 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
         None
     };
 
+    // Permissions
     let perms = &[
         "Current user only (uaccess)",
-        "Everyone (mode 0666)",
+        "Everyone (mode 0666)", // Not recommended
         "Group 'uucp' (mode 0660)",
         "Open in editor...",
     ];
+
     let perm_idx = Select::with_theme(theme)
         .with_prompt("Permission")
         .default(0)
@@ -215,14 +217,17 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
 }
 
 fn manage_rules(theme: &ColorfulTheme, action: &str) -> Result<()> {
-    let paths = fs::read_dir("/etc/udev/rules.d/")?;
-    let mut files: Vec<String> = paths
+    let path = Path::new("/etc/udev/rules.d/");
+    let entry = fs::read_dir(path)?;
+
+    let mut files: Vec<String> = entry
         .filter_map(|e| e.ok())
         .map(|e| e.path().to_string_lossy().into_owned())
         .filter(|s| s.ends_with(".rules"))
         .collect();
     files.sort();
     files.push("Go Back".to_string());
+
     if files.len() == 1 {
         println!("No rules found.");
         return Ok(());
