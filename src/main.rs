@@ -10,6 +10,7 @@ use std::path::Path;
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
+use os_release::OsRelease;
 
 #[derive(Parser)]
 #[command(name = "udever")]
@@ -69,6 +70,14 @@ fn main() -> Result<()> {
     }
     Ok(())
 }
+
+fn check_os() -> Result<String> {
+    let os = OsRelease::new()?;
+    println!("OS Name: {}", os.name);
+    println!("OS ID: {}", os.id);
+
+    Ok(os.name)
+} 
 
 // Use anyhow
 fn reload_udev(theme: &ColorfulTheme) -> Result<()> {
@@ -142,18 +151,25 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
         None
     };
 
+
+    let group_label = match check_os()?.as_str() {
+        "arch" => "Group 'uucp' (mode 0660)",
+        "ubuntu"|"debian"|"fedora" => "Group 'dialout' (mode 0660)",
+        _ => "Group 'dialout' (mode 0660) [OS type not detected]",
+    };
+
     // Permissions
-    let perms = &[
+    let perms = vec![
         "Current user only (uaccess)",
         "Everyone (mode 0666)", // Not recommended
-        "Group 'uucp' (mode 0660)",
+        group_label, // dynamic label
         "Open in editor...",
     ];
 
     let perm_idx = Select::with_theme(theme)
         .with_prompt("Permission")
         .default(0)
-        .items(perms)
+        .items(&perms)
         .interact()?;
 
     let perm_rule = match perm_idx {
@@ -218,13 +234,14 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
 
 fn manage_rules(theme: &ColorfulTheme, action: &str) -> Result<()> {
     let path = Path::new("/etc/udev/rules.d/");
-    let entry = fs::read_dir(path)?;
+    let entries = fs::read_dir(path)?;
 
-    let mut files: Vec<String> = entry
+    let mut files: Vec<String> = entries
         .filter_map(|e| e.ok())
         .map(|e| e.path().to_string_lossy().into_owned())
         .filter(|s| s.ends_with(".rules"))
         .collect();
+
     files.sort();
     files.push("Go Back".to_string());
 
