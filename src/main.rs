@@ -152,9 +152,11 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
     };
 
 
+    // memo: Should i use ID_LIKE instead of ID..??
+    //
     let group_label = match check_os()?.as_str() {
-        "arch" => "Group 'uucp' (mode 0660)",
-        "ubuntu"|"debian"|"fedora" => "Group 'dialout' (mode 0660)",
+        "arch"|"manjaro" => "Group 'uucp' (mode 0660)",
+        "ubuntu"|"linuxmint"|"debian"|"fedora"|"rhel" => "Group 'dialout' (mode 0660)",
         _ => "Group 'dialout' (mode 0660) [OS type not detected]",
     };
 
@@ -182,7 +184,10 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
     let name_base = symlink
         .clone()
         .unwrap_or_else(|| format!("{}-{}", vendor, product));
-    let filename = format!("/etc/udev/rules.d/99-{}.rules", name_base);
+    
+
+    let filename = Path::new("/etc/udev/rules.d")
+        .join(format!("99-{}.rules", name_base));
 
     let mut rule = if perm_rule == "EDITOR" {
         format!(
@@ -207,7 +212,7 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
     }
 
     if perm_rule != "EDITOR" {
-        println!("\n--- Preview: {} ---", filename);
+        println!("\n--- Preview: {} ---", filename.display());
         println!("{}", rule.trim());
         println!("-----------------------------------");
 
@@ -225,7 +230,7 @@ fn create_new_rule(theme: &ColorfulTheme, arg_id: Option<String>) -> Result<()> 
     println!("File created.");
 
     if perm_idx == 3 {
-        open_editor(&filename)?;
+        open_editor(&filename.to_string_lossy())?;
     }
 
     apply_and_verify(&symlink)?;
@@ -282,6 +287,8 @@ fn open_editor(filepath: &str) -> Result<()> {
     let editor = env::var("VISUAL")
         .or_else(|_| env::var("EDITOR"))
         .unwrap_or_else(|_| "nano".to_string());
+
+    println!("Your Editor is {}", editor);
 
     let status = Command::new(&editor)
         .arg(filepath)
