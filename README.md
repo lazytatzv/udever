@@ -30,6 +30,16 @@ You need [Rust](https://www.rust-lang.org/tools/install) installed.
 cargo install udever
 ```
 
+Since `udever` requires root privileges to manage udev rules, i recommend making it available to sudo:
+
+```bash
+# Ensure that cargo's path is valid
+# in ~/.bashrc etc.
+export PATH="$HOME/.cargo/bin:$PATH"
+# You should link
+sudo ln -s $HOME/.cargo/bin/udever /usr/local/bin/udever
+```
+
 ### Arch Linux (AUR)
 You can install `udever` from the AUR using an AUR helper like `yay` or `paru`.
 
