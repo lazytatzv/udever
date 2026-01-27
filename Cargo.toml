@@ -1,6 +1,6 @@
 [package]
 name = "udever"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["lazytatzv"]
 edition = "2024" 
 description = "Interactive udev rule generator for Linux. Stop writing rules by hand."
